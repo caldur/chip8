@@ -21,10 +21,10 @@ template nn(opcode: uint16): byte =
   byte(opcode and 0x00FF)
 
 template regx(opcode: uint16): int =
-  int((opcode and 0x0F00) shr 8)
+  int(opcode and 0x0F00) shr 8
 
 template regy(opcode: uint16): int =
-  int((opcode and 0x00F0) shr 4)
+  int(opcode and 0x00F0) shr 4
 
 proc clear[T](arr: var openArray[T]) =
   for i in 0 .. arr.high:
@@ -187,7 +187,7 @@ proc opcodeDXYN(cpu: var Chip8CPU, opcode: uint16) =
   let
     coordx = int(cpu.registers[opcode.regx]) * SCALE
     coordy = int(cpu.registers[opcode.regy]) * SCALE
-    height = opcode and 0x000F
+    height = uint32(opcode) and 0x000F
 
   cpu.registers[0xF] = 0
 
@@ -209,6 +209,7 @@ proc opcodeDXYN(cpu: var Chip8CPU, opcode: uint16) =
             cpu.screenData[y + i][x + j][0] = color
             cpu.screenData[y + i][x + j][1] = color
             cpu.screenData[y + i][x + j][2] = color
+      dec xpixelinv
 
 #skip the next instruction if they key stored in vx is pressed
 proc opcodeEX9E(cpu: var Chip8CPU, opcode: uint16) =
@@ -276,8 +277,8 @@ proc opcodeFX65(cpu: var Chip8CPU, opcode: uint16) =
   cpu.addressI = cpu.addressI + uint16(ivx) + 1
 
 proc getNextOpcode(cpu: var Chip8CPU): uint16 =
-  result = cpu.gameMemory[cpu.programCounter] shl 8
-  result = result or cpu.gameMemory[cpu.programCounter+1]
+  result = uint16(cpu.gameMemory[cpu.programCounter]) shl 8
+  result = result or uint16(cpu.gameMemory[cpu.programCounter+1])
   cpu.programCounter += 2
 
 proc decodeOpcode8(cpu: var Chip8CPU, opcode: uint16) =
@@ -343,6 +344,10 @@ proc decodeOpcodeF(cpu: var Chip8CPU, opcode: uint16) =
       cpu.opcodeFX65(opcode)
     else:
       discard
+
+proc createCPU*(): Chip8CPU =
+  result = new(Chip8CPU)
+  result.stack = @[]
 
 proc loadRom*(cpu: var Chip8CPU, romname: string): bool =
   cpu.reset()
